@@ -37,10 +37,11 @@ sh setup-ssclash.sh
 
 After installation open **Services → SSClash** in LuCI, upload your Clash/Mihomo config and start the service.
 
-If arch autodetection for the core got it wrong, set it manually:
+Normally you don't need to set the arch — the script figures it out. The `ARCH=` prefix is only needed if autodetection got it wrong. It's set **at launch**, on the same line (it's an environment variable, not a separate step):
 
 ```
-ARCH=arm64 sh setup-ssclash.sh
+sh setup-ssclash.sh             # normal run — arch is detected automatically
+ARCH=arm64 sh setup-ssclash.sh  # run with a forced arch
 ```
 
 Possible `ARCH` values: `amd64-compatible`, `amd64`, `amd64-v3`, `386`, `arm64`, `armv7`, `armv6`, `armv5`, `mipsle-softfloat`, `mips-softfloat`, `mips64le`, `mips64`, `riscv64`, `loong64`.

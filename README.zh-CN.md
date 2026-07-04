@@ -37,10 +37,11 @@ sh setup-ssclash.sh
 
 安装完成后，在 LuCI 中打开 **Services → SSClash**，上传你的 Clash/Mihomo 配置并启动服务。
 
-如果内核架构自动识别有误，可手动指定：
+通常无需指定架构 —— 脚本会自动识别。只有当自动识别有误时才需要 `ARCH=` 前缀。它在**启动时**、在同一行中设置（这是环境变量，而非单独的步骤）：
 
 ```
-ARCH=arm64 sh setup-ssclash.sh
+sh setup-ssclash.sh             # 普通运行 —— 自动识别架构
+ARCH=arm64 sh setup-ssclash.sh  # 以强制指定的架构运行
 ```
 
 `ARCH` 可选值：`amd64-compatible`、`amd64`、`amd64-v3`、`386`、`arm64`、`armv7`、`armv6`、`armv5`、`mipsle-softfloat`、`mips-softfloat`、`mips64le`、`mips64`、`riscv64`、`loong64`。
