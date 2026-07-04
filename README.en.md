@@ -137,6 +137,7 @@ This project is just an installer. All the real work is done upstream:
 
 - [zerolabnet/SSClash](https://github.com/zerolabnet/SSClash) — the luci-app-ssclash panel
 - [MetaCubeX/mihomo](https://github.com/MetaCubeX/mihomo) — the Clash.Meta core
+- [fildunsky](https://github.com/fildunsky) — the "updating from behind a whitelist" idea (routing the router's own traffic through Mihomo)
 
 The installed components are the property of their authors and are distributed under their own licenses. This license (MIT) covers only the code of this script.
 

@@ -137,6 +137,7 @@ sh uninstall-ssclash.sh
 
 - [zerolabnet/SSClash](https://github.com/zerolabnet/SSClash) —— luci-app-ssclash 面板
 - [MetaCubeX/mihomo](https://github.com/MetaCubeX/mihomo) —— Clash.Meta 内核
+- [fildunsky](https://github.com/fildunsky) —— “在白名单限制下更新”的思路（将路由器自身流量经 Mihomo 代理）
 
 所安装的组件归各自作者所有，并按其各自的许可证分发。本许可证（MIT）仅涵盖本脚本的代码。
 

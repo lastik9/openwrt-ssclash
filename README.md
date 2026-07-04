@@ -137,6 +137,7 @@ sh uninstall-ssclash.sh
 
 - [zerolabnet/SSClash](https://github.com/zerolabnet/SSClash) — панель luci-app-ssclash
 - [MetaCubeX/mihomo](https://github.com/MetaCubeX/mihomo) — ядро Clash.Meta
+- [fildunsky](https://github.com/fildunsky) — идея обновления «за белыми списками» (проксирование трафика роутера через Mihomo)
 
 Устанавливаемые компоненты являются собственностью их авторов и распространяются под их собственными лицензиями. Настоящая лицензия (MIT) покрывает только код этого скрипта.
 
