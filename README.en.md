@@ -75,11 +75,14 @@ Prefer binding the port to localhost only (`bind-address: 127.0.0.1`) so you don
 if pidof clash >/dev/null 2>&1; then
   export http_proxy="http://127.0.0.1:7890"
   export https_proxy="http://127.0.0.1:7890"
-  export no_proxy="127.0.0.1,localhost,::1"
+  # the router's LAN address is resolved on the fly via uci — no hardcoded IP
+  _lan="$(uci -q get network.lan.ipaddr 2>/dev/null)"
+  export no_proxy="127.0.0.1,localhost,::1${_lan:+,$_lan}"
+  unset _lan
 fi
 ```
 
-The `pidof clash` check matters: the proxy is enabled only while the core is running. If Mihomo is down (crashed or still starting after a reboot), the variables are not set — so `apk`/`curl` don't break trying to reach a dead port. The setting applies to new SSH sessions (the profile is read at login).
+The `pidof clash` check matters: the proxy is enabled only while the core is running. If Mihomo is down (crashed or still starting after a reboot), the variables are not set — so `apk`/`curl` don't break trying to reach a dead port. The router's LAN address in `no_proxy` isn't hardcoded — it's resolved at each login via `uci`, so the file works the same on any router. The setting applies to new SSH sessions (the profile is read at login).
 
 For a one-off test without touching the profile, do the same in the current session:
 

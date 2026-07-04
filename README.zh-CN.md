@@ -75,11 +75,14 @@ rules:
 if pidof clash >/dev/null 2>&1; then
   export http_proxy="http://127.0.0.1:7890"
   export https_proxy="http://127.0.0.1:7890"
-  export no_proxy="127.0.0.1,localhost,::1"
+  # 路由器的 LAN 地址通过 uci 实时获取 —— 不写死 IP
+  _lan="$(uci -q get network.lan.ipaddr 2>/dev/null)"
+  export no_proxy="127.0.0.1,localhost,::1${_lan:+,$_lan}"
+  unset _lan
 fi
 ```
 
-`pidof clash` 检查很重要：仅当内核正在运行时才启用代理。如果 Mihomo 未运行（崩溃，或重启后仍在启动中），这些变量不会被设置 —— 这样 `apk`/`curl` 就不会因试图连接一个失效端口而中断。该设置在新的 SSH 会话中生效（登录时读取该配置）。
+`pidof clash` 检查很重要：仅当内核正在运行时才启用代理。如果 Mihomo 未运行（崩溃，或重启后仍在启动中），这些变量不会被设置 —— 这样 `apk`/`curl` 就不会因试图连接一个失效端口而中断。`no_proxy` 中的路由器 LAN 地址并非写死，而是每次登录时通过 `uci` 获取，因此该文件在任何路由器上都同样有效。该设置在新的 SSH 会话中生效（登录时读取该配置）。
 
 若想一次性测试而不改动配置文件，可在当前会话中执行相同操作：
 
