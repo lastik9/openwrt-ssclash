@@ -1,0 +1,96 @@
+# openwrt-ssclash
+
+**Русский** · [English](https://github.com/lastik9/openwrt-ssclash/blob/main/README.en.md) · [中文](https://github.com/lastik9/openwrt-ssclash/blob/main/README.zh-CN.md)
+
+Установочный скрипт для **SSClash** — прозрачного обхода блокировок на **OpenWrt 25 (apk)** через ядро **Mihomo (Clash.Meta)** и веб-панель [luci-app-ssclash](https://github.com/zerolabnet/SSClash).
+
+Один прогон на чистой системе: ставит зависимости и последнюю версию панели, а ядро Mihomo либо качает сразу из консоли (по подтверждению), либо оставляет на кнопку в LuCI. Есть отдельный аптинсталлер для чистого удаления.
+
+## Зачем
+
+[luci-app-ssclash](https://github.com/zerolabnet/SSClash) — обёртка над ядром [Mihomo](https://github.com/MetaCubeX/mihomo), которая заворачивает трафик роутера через прокси (VLESS/Shadowsocks/Trojan и т.д.) по правилам из твоего конфига. Ставится это в несколько ручных шагов с фиксированными версиями пакета и ядра. Скрипт снимает рутину: сам берёт **последние** версии панели и ядра с GitHub и сам определяет архитектуру роутера под нужную сборку Mihomo.
+
+## Требования
+
+- OpenWrt 25.x с пакетным менеджером **apk** (для сборок на opkg скрипт не предназначен).
+- Доступ в интернет на роутере на момент запуска — качаются пакеты, панель и ядро с GitHub.
+- Немного места в `/opt` под ядро Mihomo (~15–30 МБ в распакованном виде).
+
+## Что делает скрипт
+
+1. `apk update` и установка зависимостей: `curl`, `kmod-nft-tproxy`, `kmod-tun`, `coreutils-base64`.
+2. Определяет последнюю версию **luci-app-ssclash** через GitHub API и ставит её (`apk add --allow-untrusted`).
+3. *(Опционально, с подтверждением)* определяет арку роутера через `apk --print-arch`, находит под неё последнее ядро **Mihomo** и распаковывает его в `/opt/clash/bin/clash`.
+4. Включает сервис (`/etc/init.d/clash enable`).
+5. *(Опционально, с подтверждением)* перезагружает роутер.
+
+Если ядро не качать в п.3 — его в один клик поставит сама панель: **Services → SSClash → Settings → Mihomo Kernel Management → Download Latest Kernel** (она тоже определяет арку сама).
+
+## Установка
+
+Команды выполняются **на роутере** (по SSH), а не на компьютере:
+
+```
+wget https://raw.githubusercontent.com/lastik9/openwrt-ssclash/main/setup-ssclash.sh
+sh setup-ssclash.sh
+```
+
+После установки открой в LuCI **Services → SSClash**, залей свой конфиг Clash/Mihomo и запусти сервис.
+
+Если автоопределение арки для ядра ошиблось, задай её вручную:
+
+```
+ARCH=arm64 sh setup-ssclash.sh
+```
+
+Возможные значения `ARCH`: `amd64-compatible`, `amd64`, `amd64-v3`, `386`, `arm64`, `armv7`, `armv6`, `armv5`, `mipsle-softfloat`, `mips-softfloat`, `mips64le`, `mips64`, `riscv64`, `loong64`.
+
+## Удаление
+
+Снести всё, что поставил скрипт. На роутере:
+
+```
+wget https://raw.githubusercontent.com/lastik9/openwrt-ssclash/main/uninstall-ssclash.sh
+sh uninstall-ssclash.sh
+```
+
+Скрипт всегда удаляет сам SSClash, а в конце **отдельно спрашивает**, сносить ли ещё и общесистемные зависимости. Разница такая:
+
+**Обычное удаление** (выполняется всегда) убирает то, что относится именно к SSClash: пакет `luci-app-ssclash`, весь каталог `/opt/clash` (ядро Mihomo и твои конфиги) и кэш меню LuCI. После этого SSClash на роутере не остаётся — в 99% случаев этого достаточно.
+
+**Полное удаление** (если ответить «да» на вопрос про зависимости) вдобавок удаляет системные пакеты, которые SSClash тянул для работы:
+
+- `kmod-tun` — модуль ядра для TUN-интерфейсов;
+- `kmod-nft-tproxy` — модуль nftables для прозрачного проксирования;
+- `coreutils-base64` — утилита base64.
+
+Загвоздка в том, что это **общие** пакеты: их могут использовать и другие вещи на роутере (VPN вроде OpenVPN/WireGuard-обвязок, другие прокси, разные скрипты). Если удалить их, а что-то ещё на них опиралось — то что-то сломается. Поэтому по умолчанию скрипт их **оставляет**: места они занимают копейки и никому не мешают. Соглашайся на их удаление, только если роутер выделен под SSClash и ты уверен, что больше их ничего не использует. `curl` не удаляется в любом случае — он нужен слишком многим.
+
+## Соответствие архитектур
+
+| OpenWrt (`apk --print-arch`)   | Сборка Mihomo         |
+| ------------------------------ | --------------------- |
+| `aarch64_*`                    | `arm64`               |
+| `x86_64`                       | `amd64-compatible`    |
+| `i386_*`                       | `386`                 |
+| `arm_cortex-a7/a9/a15…`        | `armv7`               |
+| `arm_arm1176*` (Pi1/Zero)      | `armv6`               |
+| `arm_mpcore/fa526/xscale…`     | `armv5`               |
+| `mipsel_24kc`                  | `mipsle-softfloat`    |
+| `mips_24kc`                    | `mips-softfloat`      |
+| `mips64el_*` / `mips64_*`      | `mips64le` / `mips64` |
+| `riscv64_*`                    | `riscv64`             |
+| `loongarch64_*`                | `loong64`             |
+
+## Благодарности
+
+Проект — лишь установщик. Вся работа сделана в апстримах:
+
+- [zerolabnet/SSClash](https://github.com/zerolabnet/SSClash) — панель luci-app-ssclash
+- [MetaCubeX/mihomo](https://github.com/MetaCubeX/mihomo) — ядро Clash.Meta
+
+Устанавливаемые компоненты являются собственностью их авторов и распространяются под их собственными лицензиями. Настоящая лицензия (MIT) покрывает только код этого скрипта.
+
+## Лицензия
+
+[MIT](LICENSE) © 2026 lastik9

@@ -1,0 +1,6 @@
+# временные артефакты
+*.apk
+*.gz
+*.tmp
+.DS_Store
+Thumbs.db

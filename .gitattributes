@@ -1,0 +1,4 @@
+# Скрипты всегда с LF, иначе на роутере ломается интерпретатор (CRLF из Windows)
+*.sh   text eol=lf
+*.md   text eol=lf
+LICENSE text eol=lf
