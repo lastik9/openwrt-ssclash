@@ -18,11 +18,10 @@ One run on a clean system: installs the dependencies and the latest version of t
 
 ## What the script does
 
-1. `apk update` and installs dependencies: `curl`, `kmod-nft-tproxy`, `kmod-tun`, `coreutils-base64`.
+1. `apk update`, installs dependencies (`curl`, `kmod-nft-tproxy`, `kmod-tun`, `coreutils-base64`) and loads the `tun`, `nft_tproxy` kernel modules — so no reboot is needed.
 2. Resolves the latest **luci-app-ssclash** release via the GitHub API and installs it (`apk add --allow-untrusted`).
 3. *(Optional, with confirmation)* detects the router's arch via `apk --print-arch`, finds the matching latest **Mihomo** core and unpacks it to `/opt/clash/bin/clash`.
-4. Enables the service (`/etc/init.d/clash enable`).
-5. *(Optional, with confirmation)* reboots the router.
+4. Leaves the service **stopped** and does **not** reboot the router — so you first open the panel, upload the config, and then start Clash yourself. The script does **not** touch boot autostart (the package enables it by default).
 
 If you skip the core in step 3, the panel installs it in one click: **Services → SSClash → Settings → Mihomo Kernel Management → Download Latest Kernel** (it detects the arch on its own too).
 
@@ -35,7 +34,13 @@ wget https://raw.githubusercontent.com/lastik9/openwrt-ssclash/main/setup-ssclas
 sh setup-ssclash.sh
 ```
 
-After installation open **Services → SSClash** in LuCI, upload your Clash/Mihomo config and start the service.
+After installation Clash is **stopped**. Open **Services → SSClash** in LuCI, upload your Clash/Mihomo config and start the service — from the panel or with:
+
+```
+/etc/init.d/clash start
+```
+
+Autostart on boot is already enabled by default, so after a reboot Clash comes up on its own.
 
 Normally you don't need to set the arch — the script figures it out. The `ARCH=` prefix is only needed if autodetection got it wrong. It's set **at launch**, on the same line (it's an environment variable, not a separate step):
 
@@ -45,6 +50,46 @@ ARCH=arm64 sh setup-ssclash.sh  # run with a forced arch
 ```
 
 Possible `ARCH` values: `amd64-compatible`, `amd64`, `amd64-v3`, `386`, `arm64`, `armv7`, `armv6`, `armv5`, `mipsle-softfloat`, `mips-softfloat`, `mips64le`, `mips64`, `riscv64`, `loong64`.
+
+## Updating from behind a whitelist
+
+If your ISP blocks direct access to the OpenWrt/GitHub repositories (e.g. mobile internet in "whitelist" mode), you can update the router's packages through the Mihomo proxy that's already running: the router's own traffic (`apk`, `curl`) is sent to the local proxy at `127.0.0.1:7890`.
+
+It's set up in two places.
+
+**1. Mihomo config** (uploaded via LuCI — you edit it yourself). Open the local port and add a rule sending the update domains through the proxy node:
+
+```yaml
+mixed-port: 7890
+
+rules:
+  - DOMAIN-SUFFIX,openwrt.org,PROXY
+  # add github.com, githubusercontent.com, etc. if needed
+```
+
+Prefer binding the port to localhost only (`bind-address: 127.0.0.1`) so you don't turn the router into an open proxy on the LAN.
+
+**2. The router's environment variables.** This is what `setup-ssclash.sh` does — during install it asks "Set up proxying of the router's traffic?". If you agree, it creates `/etc/profile.d/ssclash-proxy.sh`:
+
+```sh
+if pidof clash >/dev/null 2>&1; then
+  export http_proxy="http://127.0.0.1:7890"
+  export https_proxy="http://127.0.0.1:7890"
+  export no_proxy="127.0.0.1,localhost,::1"
+fi
+```
+
+The `pidof clash` check matters: the proxy is enabled only while the core is running. If Mihomo is down (crashed or still starting after a reboot), the variables are not set — so `apk`/`curl` don't break trying to reach a dead port. The setting applies to new SSH sessions (the profile is read at login).
+
+For a one-off test without touching the profile, do the same in the current session:
+
+```
+export http_proxy=http://127.0.0.1:7890
+export https_proxy=http://127.0.0.1:7890
+apk update
+```
+
+The `/etc/profile.d/ssclash-proxy.sh` file is removed automatically by the uninstaller.
 
 ## Uninstall
 

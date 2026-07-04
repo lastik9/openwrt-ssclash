@@ -87,6 +87,10 @@ apk update >/dev/null 2>&1 || die "apk update не удался"
 msg "Ставлю зависимости: $DEPS"
 apk add $DEPS >/dev/null 2>&1 || die "не удалось поставить зависимости"
 
+# активируем свежеустановленные модули ядра, чтобы не требовать перезагрузку
+modprobe tun 2>/dev/null
+modprobe nft_tproxy 2>/dev/null
+
 msg "Ищу последнюю версию luci-app-ssclash..."
 APK_URL="$(gh_asset "$SSCLASH_REPO" "\.apk")"
 [ -n "$APK_URL" ] || die "не нашёл .apk (лимит GitHub API?). Повторите позже."
@@ -102,8 +106,6 @@ if ask "Скачать ядро Mihomo сейчас через CLI? (иначе 
   CORE_DONE=1
 fi
 
-[ -x /etc/init.d/clash ] && /etc/init.d/clash enable 2>/dev/null
-
 echo
 msg "Готово. luci-app-ssclash установлен: $APK_URL"
 if [ "$CORE_DONE" = "1" ]; then
@@ -115,8 +117,32 @@ else
 fi
 
 echo
-if ask "Перезагрузить роутер сейчас?"; then
-  reboot
-else
-  warn "Позже запусти сервис в LuCI (Services -> SSClash) или перезагрузи роутер."
+warn "Опция для обновлений «за белыми списками»: пускать трафик самого роутера"
+warn "(apk/curl) через локальный прокси Mihomo, чтобы обновляться, когда провайдер"
+warn "режет доступ к репозиториям OpenWrt/GitHub напрямую."
+warn "Требует в конфиге Mihomo строки 'mixed-port: 7890' (подробности — в README)."
+if ask "Настроить проксирование трафика роутера?"; then
+  cat > /etc/profile.d/ssclash-proxy.sh << 'EOF'
+# Добавлено openwrt-ssclash: трафик роутера (apk/curl) через локальный прокси Mihomo.
+# Прокси включается ТОЛЬКО когда ядро запущено — иначе apk/curl не сломаются,
+# если Mihomo не работает (упал или ещё грузится после перезагрузки).
+if pidof clash >/dev/null 2>&1; then
+  export http_proxy="http://127.0.0.1:7890"
+  export https_proxy="http://127.0.0.1:7890"
+  export no_proxy="127.0.0.1,localhost,::1"
 fi
+EOF
+  chmod +x /etc/profile.d/ssclash-proxy.sh
+  msg "Создан /etc/profile.d/ssclash-proxy.sh"
+  warn "Проверь, что в конфиге Mihomo есть 'mixed-port: 7890' и правило для домена"
+  warn "  обновлений, напр. 'DOMAIN-SUFFIX,openwrt.org,PROXY' (см. README)."
+  warn "Настройка применится в НОВОЙ SSH-сессии или после перезагрузки."
+fi
+
+echo
+msg "Установка завершена. Clash сейчас остановлен."
+msg "Автозапуск при загрузке — по умолчанию включён (скрипт его не менял)."
+warn "Дальнейшие шаги:"
+warn "  1. LuCI -> Services -> SSClash: залей свой конфиг Clash/Mihomo."
+warn "  2. Запусти сейчас: '/etc/init.d/clash start' (или кнопкой в панели),"
+warn "     либо просто перезагрузи роутер — Clash поднимется сам."
