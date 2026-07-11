@@ -34,6 +34,18 @@ wget https://raw.githubusercontent.com/lastik9/openwrt-ssclash/main/setup-ssclas
 sh setup-ssclash.sh
 ```
 
+This shows a menu:
+
+```
+  1) Full install: panel + core + proxying (asks)
+  2) Panel + core only (install/update)
+  3) Add "behind a whitelist" proxying
+  4) Remove proxying
+  0) Exit
+```
+
+For a first install pick **1**. Options **3/4** are handy later: if you installed without proxying, you can add it (or remove it) separately without reinstalling everything. The menu needs the script to be run as a file (`sh setup-ssclash.sh`); it won't work via `| sh` — in that case pass an action as an argument instead: `install`, `app`, `bypass`, `unbypass`.
+
 After installation Clash is **stopped**. Open **Services → SSClash** in LuCI, upload your Clash/Mihomo config and start the service — from the panel or with:
 
 ```
@@ -69,7 +81,7 @@ rules:
 
 Prefer binding the port to localhost only (`bind-address: 127.0.0.1`) so you don't turn the router into an open proxy on the LAN.
 
-**2. The router's environment variables.** This is what `setup-ssclash.sh` does — during install it asks "Set up proxying of the router's traffic?". If you agree, it creates `/etc/profile.d/ssclash-proxy.sh`:
+**2. The router's environment variables.** This is what `setup-ssclash.sh` does — during install it asks "Set up proxying of the router's traffic?" (menu option **1**). You can also add or remove it later via menu options **3/4** (or `sh setup-ssclash.sh bypass` / `unbypass`), without reinstalling everything. If you agree, it creates `/etc/profile.d/ssclash-proxy.sh`:
 
 ```sh
 if pidof clash >/dev/null 2>&1; then
@@ -96,14 +108,17 @@ The `/etc/profile.d/ssclash-proxy.sh` file is removed automatically by the unins
 
 ## Uninstall
 
-Remove everything the script installed. On the router:
+You can remove it two ways — both call the same logic:
+
+- via menu option **5** in `setup-ssclash.sh`;
+- via the standalone uninstaller (on the router):
 
 ```
 wget https://raw.githubusercontent.com/lastik9/openwrt-ssclash/main/uninstall-ssclash.sh
 sh uninstall-ssclash.sh
 ```
 
-The script always removes SSClash itself, and at the end **asks separately** whether to also remove the system-wide dependencies. The difference:
+It first asks for confirmation, always removes SSClash itself, and at the end **asks separately** whether to also remove the system-wide dependencies. The difference:
 
 **Basic uninstall** (always performed) removes what belongs to SSClash specifically: the `luci-app-ssclash` package, the entire `/opt/clash` directory (the Mihomo core and your configs) and the LuCI menu cache. After this SSClash is gone from the router — enough in 99% of cases.
 

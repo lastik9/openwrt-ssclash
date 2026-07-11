@@ -1,45 +1,27 @@
 #!/bin/sh
-# uninstall-ssclash.sh — полное удаление SSClash с OpenWrt 25 (apk)
+# uninstall-ssclash.sh — удаление SSClash с OpenWrt 25 (apk)
 # https://github.com/lastik9/openwrt-ssclash
+#
+# Тонкая обёртка: вся логика удаления живёт в setup-ssclash.sh (действие
+# `uninstall`), чтобы код не дублировался. Скрипт можно запускать сам по себе —
+# если setup-ssclash.sh лежит рядом, используется он (без сети), иначе качается.
 set -u
 
-RED='\033[0;31m'; GRN='\033[0;32m'; YLW='\033[0;33m'; NC='\033[0m'
-msg()  { printf "%b>>%b %s\n" "$GRN" "$NC" "$1"; }
-warn() { printf "%b!!%b %s\n" "$YLW" "$NC" "$1"; }
-die()  { printf "%b##%b %s\n" "$RED" "$NC" "$1" >&2; exit 1; }
-ask()  { printf "%b??%b %s [y/N]: " "$YLW" "$NC" "$1"; read -r _a; case "$_a" in [Yy]*) return 0 ;; *) return 1 ;; esac; }
+SETUP_URL="https://raw.githubusercontent.com/lastik9/openwrt-ssclash/main/setup-ssclash.sh"
 
-CLASH_DIR="/opt/clash"
-
-command -v apk >/dev/null 2>&1 || die "apk не найден. Скрипт для OpenWrt >= 25 (apk)."
-
-msg "Останавливаю и выключаю сервис..."
-if [ -x /etc/init.d/clash ]; then
-  /etc/init.d/clash stop 2>/dev/null
-  /etc/init.d/clash disable 2>/dev/null
+# 1) локальная копия рядом — работает офлайн
+if [ -f ./setup-ssclash.sh ]; then
+  exec sh ./setup-ssclash.sh uninstall
 fi
 
-msg "Удаляю пакет luci-app-ssclash..."
-apk del luci-app-ssclash 2>/dev/null || warn "пакет не был установлен"
-
-msg "Удаляю каталог $CLASH_DIR (конфиги и ядро)..."
-rm -rf "$CLASH_DIR"
-
-# сброс кэша меню LuCI
-rm -f /tmp/luci-indexcache* 2>/dev/null
-rm -rf /tmp/luci-modulecache 2>/dev/null
-
-echo
-warn "Дальше — общесистемные зависимости. Их могли ставить и другие сервисы"
-warn "(VPN, другие прокси, скрипты), поэтому по умолчанию я их НЕ трогаю:"
-warn "  kmod-nft-tproxy, kmod-tun, coreutils-base64  (curl оставлю в любом случае)"
-if ask "Удалить эти зависимости тоже? Соглашайся, только если роутер выделен под SSClash"; then
-  apk del kmod-nft-tproxy kmod-tun coreutils-base64 2>/dev/null
-  msg "Зависимости удалены."
-fi
-
-echo
-msg "SSClash полностью удалён."
-if ask "Перезагрузить роутер сейчас?"; then
-  reboot
+# 2) иначе скачиваем setup и запускаем его в режиме uninstall
+TMP=/tmp/setup-ssclash.sh
+if command -v curl >/dev/null 2>&1 && curl -fsSL "$SETUP_URL" -o "$TMP" 2>/dev/null; then
+  exec sh "$TMP" uninstall
+elif command -v wget >/dev/null 2>&1 && wget -qO "$TMP" "$SETUP_URL" 2>/dev/null; then
+  exec sh "$TMP" uninstall
+else
+  echo "Не удалось получить setup-ssclash.sh (нет сети?)." >&2
+  echo "Скачай его рядом и запусти:  sh setup-ssclash.sh uninstall" >&2
+  exit 1
 fi

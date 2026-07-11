@@ -34,6 +34,18 @@ wget https://raw.githubusercontent.com/lastik9/openwrt-ssclash/main/setup-ssclas
 sh setup-ssclash.sh
 ```
 
+运行后会显示菜单：
+
+```
+  1) 完整安装：面板 + 内核 + 代理（会询问）
+  2) 仅面板 + 内核（安装/更新）
+  3) 追加“白名单限制下更新”代理
+  4) 移除代理
+  0) 退出
+```
+
+首次安装选 **1**。选项 **3/4** 便于日后使用：若安装时未启用代理，可单独追加（或移除），无需重装全部。菜单需要以文件方式运行（`sh setup-ssclash.sh`）；通过 `| sh` 无法使用 —— 此时改用参数指定动作：`install`、`app`、`bypass`、`unbypass`。
+
 安装完成后，Clash 处于**停止**状态。在 LuCI 中打开 **Services → SSClash**，上传你的 Clash/Mihomo 配置并启动服务 —— 用面板按钮或命令：
 
 ```
@@ -69,7 +81,7 @@ rules:
 
 建议只将该端口绑定到本地（`bind-address: 127.0.0.1`），以免把路由器变成局域网中的开放代理。
 
-**2. 路由器的环境变量。** 这一步由 `setup-ssclash.sh` 完成 —— 安装时它会询问“是否设置路由器流量代理？”。若同意，则创建 `/etc/profile.d/ssclash-proxy.sh`：
+**2. 路由器的环境变量。** 这一步由 `setup-ssclash.sh` 完成 —— 安装时它会询问“是否设置路由器流量代理？”（菜单选项 **1**）。日后也可通过菜单选项 **3/4**（或 `sh setup-ssclash.sh bypass` / `unbypass`）单独追加或移除，无需重装全部。若同意，则创建 `/etc/profile.d/ssclash-proxy.sh`：
 
 ```sh
 if pidof clash >/dev/null 2>&1; then
@@ -96,14 +108,17 @@ apk update
 
 ## 卸载
 
-移除脚本安装的所有内容。在路由器上：
+有两种方式，均调用相同的逻辑：
+
+- 通过 `setup-ssclash.sh` 菜单中的选项 **5**；
+- 通过独立的卸载脚本（在路由器上）：
 
 ```
 wget https://raw.githubusercontent.com/lastik9/openwrt-ssclash/main/uninstall-ssclash.sh
 sh uninstall-ssclash.sh
 ```
 
-脚本总是会移除 SSClash 本身，并在最后**单独询问**是否连同系统级依赖一起移除。区别如下：
+它会先请求确认，总是移除 SSClash 本身，并在最后**单独询问**是否连同系统级依赖一起移除。区别如下：
 
 **普通卸载**（始终执行）移除专属于 SSClash 的内容：`luci-app-ssclash` 软件包、整个 `/opt/clash` 目录（Mihomo 内核和你的配置）以及 LuCI 菜单缓存。之后 SSClash 便从路由器上消失了 —— 99% 的情况下这已足够。
 
