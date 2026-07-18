@@ -34,6 +34,8 @@ wget https://raw.githubusercontent.com/lastik9/openwrt-ssclash/main/setup-ssclas
 sh setup-ssclash.sh
 ```
 
+> **Download fails or drops (common in Russia)?** See the "If GitHub is throttled" section below — a one-paste install via a mirror.
+
 This shows a menu:
 
 ```
@@ -65,21 +67,23 @@ Possible `ARCH` values: `amd64-compatible`, `amd64`, `amd64-v3`, `386`, `arm64`,
 
 ## If GitHub is throttled (e.g. in Russia)
 
-Since May 2026 GitHub access from Russia has been unstable — downloads may drop mid-transfer. The script already retries on its own (`curl --retry`), so re-running often just works. If it doesn't, two ways around it.
-
-Via your own overseas server (no script changes — `curl` and `apk` honor `https_proxy`):
+Since May 2026 GitHub access from Russia has been unstable — downloads may drop mid-transfer. The script already retries on its own, so re-running the install often just works. If it doesn't (usually `wget` fails on `raw.githubusercontent.com`), install via a GitHub mirror. Copy these two lines on the router:
 
 ```
-https_proxy=http://HOST:PORT sh setup-ssclash.sh app
+wget -O setup-ssclash.sh https://gh-proxy.com/https://raw.githubusercontent.com/lastik9/openwrt-ssclash/main/setup-ssclash.sh
+MIRROR=https://gh-proxy.com/ sh setup-ssclash.sh
 ```
 
-Via a GitHub mirror — the `MIRROR` variable wraps both the API and release downloads:
+The first line downloads the script itself through the mirror; the second runs it so that the panel, the kernel and all GitHub requests go through the mirror too. Then the usual menu opens — pick **1**.
+
+`gh-proxy.com` is a public mirror and may be down; if so, substitute another ghproxy-compatible proxy (same format: a prefix before the full URL) or your own mirror.
+
+**Your own server instead of a mirror.** If you have an overseas server with a proxy, run the install through it — then `MIRROR` isn't needed and `https_proxy` also tunnels `wget` itself:
 
 ```
-MIRROR=https://gh-proxy.com/ sh setup-ssclash.sh app
+https_proxy=http://HOST:PORT wget -O setup-ssclash.sh https://raw.githubusercontent.com/lastik9/openwrt-ssclash/main/setup-ssclash.sh
+https_proxy=http://HOST:PORT sh setup-ssclash.sh
 ```
-
-Use a public GitHub proxy (the example above — check it's alive) or your own reverse-proxy; self-hosted is more reliable. Empty (default) means direct GitHub — nothing to do in unrestricted regions.
 
 ## Updating from behind a whitelist
 

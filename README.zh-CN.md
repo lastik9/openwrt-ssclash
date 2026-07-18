@@ -34,6 +34,8 @@ wget https://raw.githubusercontent.com/lastik9/openwrt-ssclash/main/setup-ssclas
 sh setup-ssclash.sh
 ```
 
+> **下载失败或中断（在俄罗斯常见）？** 见下方“如果 GitHub 被限速”一节——通过镜像一次粘贴即可安装。
+
 运行后会显示菜单：
 
 ```
@@ -65,21 +67,23 @@ ARCH=arm64 sh setup-ssclash.sh  # 以强制指定的架构运行
 
 ## 如果 GitHub 被限速（例如在俄罗斯）
 
-自 2026 年 5 月起，从俄罗斯访问 GitHub 不稳定——下载可能中途中断。脚本已内置自动重试（`curl --retry`），通常重新运行即可。若仍不行，有两种绕过方式。
-
-通过你自己的海外服务器（无需改脚本，`curl` 和 `apk` 会遵循 `https_proxy`）：
+自 2026 年 5 月起，从俄罗斯访问 GitHub 不稳定——下载可能中途中断。脚本已内置自动重试，通常重新运行安装即可。若仍不行（通常是 `wget` 在 `raw.githubusercontent.com` 上失败），请通过 GitHub 镜像安装。在路由器上复制这两行：
 
 ```
-https_proxy=http://HOST:PORT sh setup-ssclash.sh app
+wget -O setup-ssclash.sh https://gh-proxy.com/https://raw.githubusercontent.com/lastik9/openwrt-ssclash/main/setup-ssclash.sh
+MIRROR=https://gh-proxy.com/ sh setup-ssclash.sh
 ```
 
-通过 GitHub 镜像——`MIRROR` 变量会同时包裹 API 和发行版下载：
+第一行通过镜像下载脚本本身；第二行运行它，使面板、内核以及所有对 GitHub 的请求也都走镜像。随后会打开常规菜单——选择 **1**。
+
+`gh-proxy.com` 是公共镜像，可能不可用；届时可替换为其他兼容 ghproxy 的代理（格式相同：在完整 URL 前加前缀）或你自己的镜像。
+
+**用自己的服务器代替镜像。** 如果你有带代理的海外服务器，可让安装走它——这样就不需要 `MIRROR`，`https_proxy` 也会为 `wget` 本身建立隧道：
 
 ```
-MIRROR=https://gh-proxy.com/ sh setup-ssclash.sh app
+https_proxy=http://HOST:PORT wget -O setup-ssclash.sh https://raw.githubusercontent.com/lastik9/openwrt-ssclash/main/setup-ssclash.sh
+https_proxy=http://HOST:PORT sh setup-ssclash.sh
 ```
-
-填入公共 GitHub 代理（上面的示例请先确认可用）或你自己的反向代理；自建更可靠。留空（默认）即直连 GitHub，未受限地区无需任何操作。
 
 ## 在白名单限制下更新
 
