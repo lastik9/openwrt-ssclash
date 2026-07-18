@@ -74,10 +74,10 @@ gh_asset() {
 # --- шаги установки --------------------------------------------------------
 install_app() {
   msg "Обновляю список пакетов..."
-  apk update >/dev/null 2>&1 || die "apk update не удался"
+  apk update </dev/null >/dev/null 2>&1 || die "apk update не удался"
 
   msg "Ставлю зависимости: $DEPS"
-  apk add $DEPS >/dev/null 2>&1 || die "не удалось поставить зависимости"
+  apk add $DEPS </dev/null >/dev/null 2>&1 || die "не удалось поставить зависимости"
 
   # активируем свежеустановленные модули ядра, чтобы не требовать перезагрузку
   modprobe tun 2>/dev/null
@@ -88,7 +88,7 @@ install_app() {
   [ -n "$APK_URL" ] || die "не нашёл .apk (лимит GitHub API?). Повторите позже."
   msg "  $APK_URL"
   curl -L "$APK_URL" -o /tmp/luci-app-ssclash.apk || die "скачивание .apk не удалось"
-  apk add --allow-untrusted /tmp/luci-app-ssclash.apk || die "установка .apk не удалась"
+  apk add --allow-untrusted /tmp/luci-app-ssclash.apk </dev/null || die "установка .apk не удалась"
   rm -f /tmp/luci-app-ssclash.apk
   msg "luci-app-ssclash установлен."
 }
