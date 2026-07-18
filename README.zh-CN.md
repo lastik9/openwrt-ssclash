@@ -63,6 +63,24 @@ ARCH=arm64 sh setup-ssclash.sh  # 以强制指定的架构运行
 
 `ARCH` 可选值：`amd64-compatible`、`amd64`、`amd64-v3`、`386`、`arm64`、`armv7`、`armv6`、`armv5`、`mipsle-softfloat`、`mips-softfloat`、`mips64le`、`mips64`、`riscv64`、`loong64`。
 
+## 如果 GitHub 被限速（例如在俄罗斯）
+
+自 2026 年 5 月起，从俄罗斯访问 GitHub 不稳定——下载可能中途中断。脚本已内置自动重试（`curl --retry`），通常重新运行即可。若仍不行，有两种绕过方式。
+
+通过你自己的海外服务器（无需改脚本，`curl` 和 `apk` 会遵循 `https_proxy`）：
+
+```
+https_proxy=http://HOST:PORT sh setup-ssclash.sh app
+```
+
+通过 GitHub 镜像——`MIRROR` 变量会同时包裹 API 和发行版下载：
+
+```
+MIRROR=https://gh-proxy.com/ sh setup-ssclash.sh app
+```
+
+填入公共 GitHub 代理（上面的示例请先确认可用）或你自己的反向代理；自建更可靠。留空（默认）即直连 GitHub，未受限地区无需任何操作。
+
 ## 在白名单限制下更新
 
 如果运营商屏蔽了对 OpenWrt/GitHub 软件源的直接访问（例如处于“白名单”模式的移动网络），可以通过已经在运行的 Mihomo 代理来更新路由器的软件包：把路由器自身的流量（`apk`、`curl`）发送到本地代理 `127.0.0.1:7890`。

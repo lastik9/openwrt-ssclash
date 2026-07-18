@@ -63,6 +63,24 @@ ARCH=arm64 sh setup-ssclash.sh  # run with a forced arch
 
 Possible `ARCH` values: `amd64-compatible`, `amd64`, `amd64-v3`, `386`, `arm64`, `armv7`, `armv6`, `armv5`, `mipsle-softfloat`, `mips-softfloat`, `mips64le`, `mips64`, `riscv64`, `loong64`.
 
+## If GitHub is throttled (e.g. in Russia)
+
+Since May 2026 GitHub access from Russia has been unstable — downloads may drop mid-transfer. The script already retries on its own (`curl --retry`), so re-running often just works. If it doesn't, two ways around it.
+
+Via your own overseas server (no script changes — `curl` and `apk` honor `https_proxy`):
+
+```
+https_proxy=http://HOST:PORT sh setup-ssclash.sh app
+```
+
+Via a GitHub mirror — the `MIRROR` variable wraps both the API and release downloads:
+
+```
+MIRROR=https://gh-proxy.com/ sh setup-ssclash.sh app
+```
+
+Use a public GitHub proxy (the example above — check it's alive) or your own reverse-proxy; self-hosted is more reliable. Empty (default) means direct GitHub — nothing to do in unrestricted regions.
+
 ## Updating from behind a whitelist
 
 If your ISP blocks direct access to the OpenWrt/GitHub repositories (e.g. mobile internet in "whitelist" mode), you can update the router's packages through the Mihomo proxy that's already running: the router's own traffic (`apk`, `curl`) is sent to the local proxy at `127.0.0.1:7890`.

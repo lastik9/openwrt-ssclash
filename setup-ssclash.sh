@@ -27,6 +27,31 @@ CLASH_BIN="$CLASH_DIR/bin/clash"
 DEPS="curl kmod-nft-tproxy kmod-tun coreutils-base64"
 BYPASS_FILE="/etc/profile.d/ssclash-proxy.sh"
 
+# MIRROR: префикс-зеркало для GitHub на случай, когда провайдер режет github.com
+# (в РФ доступность падает — выборочные обрывы CDN). Пусто = прямой GitHub.
+# Оборачивает И api.github.com, И скачивание релизов. Примеры:
+#   MIRROR=https://gh-proxy.com/ sh setup-ssclash.sh app      # публичный прокси
+#   MIRROR=https://mirror.my.srv/ sh setup-ssclash.sh app     # свой reverse-proxy
+# Альтернатива без правок скрипта — прогнать всё через свой заграничный сервер:
+#   https_proxy=http://ЗАГРАН:PORT sh setup-ssclash.sh app
+MIRROR="${MIRROR:-}"
+
+# mirror_url: применить префикс-зеркало к ссылке (или вернуть как есть)
+mirror_url() {
+  case "$MIRROR" in
+    "") echo "$1" ;;
+    */) echo "${MIRROR}$1" ;;
+    *)  echo "${MIRROR}/$1" ;;
+  esac
+}
+
+# fetch: скачать с ретраями (гасит выборочные обрывы GitHub). $1=url $2=выходной файл
+# --retry-all-errors: повтор даже при TLS-ресетах/HTTP-ошибках, типичных для троттлинга.
+fetch() {
+  curl -fL --retry 5 --retry-delay 2 --retry-connrefused --retry-all-errors \
+    "$(mirror_url "$1")" -o "$2"
+}
+
 command -v apk >/dev/null 2>&1 || \
   die "apk не найден. Скрипт для OpenWrt >= 25 (apk). Для сборок на opkg он не предназначен."
 
@@ -67,7 +92,8 @@ detect_arch() {
 
 # gh_asset: ссылка на ассет последнего релиза. $1 = repo, $2 = grep-шаблон
 gh_asset() {
-  curl -sL "https://api.github.com/repos/$1/releases/latest" \
+  curl -fsSL --retry 5 --retry-delay 2 --retry-all-errors \
+    "$(mirror_url "https://api.github.com/repos/$1/releases/latest")" \
     | grep -o "https://[^\"]*$2" | head -n1
 }
 
@@ -87,7 +113,7 @@ install_app() {
   APK_URL="$(gh_asset "$SSCLASH_REPO" "\.apk")"
   [ -n "$APK_URL" ] || die "не нашёл .apk (лимит GitHub API?). Повторите позже."
   msg "  $APK_URL"
-  curl -L "$APK_URL" -o /tmp/luci-app-ssclash.apk || die "скачивание .apk не удалось"
+  fetch "$APK_URL" /tmp/luci-app-ssclash.apk || die "скачивание .apk не удалось"
   apk add --allow-untrusted /tmp/luci-app-ssclash.apk </dev/null || die "установка .apk не удалась"
   rm -f /tmp/luci-app-ssclash.apk
   msg "luci-app-ssclash установлен."
@@ -105,7 +131,7 @@ install_core() {
   [ -n "$CORE_URL" ] || die "не нашёл ядро Mihomo для '$MARCH'"
   msg "  $CORE_URL"
   mkdir -p "$CLASH_DIR/bin"
-  curl -L "$CORE_URL" -o /tmp/clash.gz || die "скачивание ядра не удалось"
+  fetch "$CORE_URL" /tmp/clash.gz || die "скачивание ядра не удалось"
   gunzip -c /tmp/clash.gz > "$CLASH_BIN" || die "распаковка ядра не удалась"
   chmod +x "$CLASH_BIN"
   rm -f /tmp/clash.gz
